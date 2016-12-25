@@ -39,13 +39,13 @@ class QLearningPlayer(Player):
     self.q = {}
     self.hist = ()
     self.last_move = None
-    self.mem = 3
-    self.gamma = 0.9
-    self.alpha = 0.4
-    self.wr = 2.0
-    self.lr = -2.0
-    self.tr = -1.0
-    self.initial = -0.5
+    self.mem = 2
+    self.gamma = 0
+    self.alpha = 0.8
+    self.wr = 5.0
+    self.lr = -10.0
+    self.tr = -2.0
+    self.initial = -1
   def getQ(self, state, action):
     if self.q.get((state, action)) is None:
       return self.initial
@@ -93,7 +93,7 @@ class QLearningPlayer(Player):
     result = tuple(result)
     prev = self.getQ(self.hist, self.last_move)
     maxqnew = max([self.getQ(result, a) for a in [0,1,2]])
-    self.q[(self.hist, self.last_move)] = prev + self.alpha * ((reward + self.gamma*maxqnew) - prev)
+    self.q[(self.hist, self.last_move)] = (1-self.alpha) * prev + self.alpha * ((reward + self.gamma*maxqnew) - prev)
     self.hist = result
 
 screen = None
@@ -108,9 +108,18 @@ clabel = None
 game = None
 h1 = None
 h2 = None
-WIN = (0,230,20)
-LOSE = (220,0,20)
+stats_b = None
+stats = None
+WIN = (40,180,60)
+LOSE = (180,40,60)
 GRAY = (230,230,230)
+PC = (160,160,80)
+USER = (0,0,200)
+w_pc = 0.0
+w_user = 0.0
+total = 0
+pc = [0]
+user = [0]
 
 def paint():
   screen.fill((20,20,20),rival)
@@ -125,6 +134,17 @@ def paint():
     screen.fill(game[i][1],hist2[i])
     screen.blit(h1[i],hist1[i])
     screen.blit(h2[i],hist2[i])
+  screen.fill((20,20,20),stats_b)
+  screen.fill((240,240,240),stats)
+  r = Rect(stats.x,stats.y + (1-pc[total])*stats.h,stats.w,1)
+  screen.fill(PC,r)
+  r = Rect(stats.x,stats.y + (1-user[total])*stats.h,stats.w,1)
+  screen.fill(USER,r)
+  for i in range(min(total,stats.w)):
+    r = Rect(stats.x+stats.w-i,stats.y + (1-user[total-i])*stats.h,1,1)
+    screen.fill(USER,r)
+    r = Rect(stats.x+stats.w-i,stats.y + (1-pc[total-i])*stats.h,1,1)
+    screen.fill(PC,r)
   pygame.display.update()
 
 if __name__ == "__main__":
@@ -133,11 +153,13 @@ if __name__ == "__main__":
   infoObject = pygame.display.Info()
   w = infoObject.current_w
   h = infoObject.current_h
-  rival = Rect(w/2-w/6,h/8,w/3,w/6+w/16)
+  rival = Rect(w/2-w/8,h/8,w/4,w/6+w/16)
+  stats = Rect(w/40,h/8,5*w/18,3*h/8)
+  stats_b = Rect(w/40-w/50,h/8-w/50,5*w/18+w/25,3*h/8+w/25)
   h1 = [Surface((0,0)),Surface((0,0)),Surface((0,0))]
   h2 = [Surface((0,0)),Surface((0,0)),Surface((0,0))]
-  hist1 = [Rect(24*w/32,h/8,w/14,w/14),Rect(24*w/32,h/8+w/12,w/14,w/14),Rect(24*w/32,h/8+w/6,w/14,w/14)]
-  hist2 = [Rect(28*w/32,h/8,w/14,w/14),Rect(28*w/32,h/8+w/12,w/14,w/14),Rect(28*w/32,h/8+w/6,w/14,w/14)]
+  hist1 = [Rect(21*w/32,h/8,w/14,w/14),Rect(24*w/32,h/8,w/14,w/14),Rect(27*w/32,h/8,w/14,w/14)]
+  hist2 = [Rect(21*w/32,h/3,w/14,w/14),Rect(24*w/32,h/3,w/14,w/14),Rect(27*w/32,h/3,w/14,w/14)]
   screen = pygame.display.set_mode((w,h), FULLSCREEN)
   rock = pygame.image.load("rock.png").convert_alpha()
   rock = pygame.transform.scale(rock, (w/6, w/6))
@@ -183,6 +205,7 @@ if __name__ == "__main__":
       pygame.quit()
       sys.exit()
     screen.fill((20,20,20),rival)
+    total += 1
     if d1 == d2:
       p1.tie()
       p2.tie()
@@ -192,11 +215,15 @@ if __name__ == "__main__":
       p2.lose()
       lose = True
       game.insert(0,(GREEN,RED))
+      w_pc += 1
     else:
       p1.lose()
       p2.win()
       win = True
       game.insert(0,(RED,GREEN))
+      w_user += 1
+    pc.append(w_pc/total)
+    user.append(w_user/total)
     if d2 == 0:
       h2.insert(0,minirock)
     elif d2 == 1:
